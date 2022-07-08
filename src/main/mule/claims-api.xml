@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd  http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
+    <http:listener-config name="claims-api-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="claims-api-config" api="resource::73bbd780-140c-4ea4-bf7b-a838a13cd484:claims-api:1.0.4:raml:zip:claims-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <configuration-properties doc:name="Configuration properties" doc:id="7f347cbf-fade-4892-9e17-766144f25081" file="mule-artifact.properties" />
+    <db:config name="Claims_Database_Config" doc:name="Database Config" doc:id="bab10506-757e-4a91-b543-90418022ef74">
+        <db:oracle-connection host="${oracle.db.host}" port="${oracle.db.port}" user="${oracle.db.user}" password="${oracle.db.password}" instance="${oracle.db.instance}" />
+    </db:config>
+	<flow name="claims-api-main">
+        <http:listener config-ref="claims-api-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="claims-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="claims-api-console">
+        <http:listener config-ref="claims-api-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="claims-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="patch:\claims:claims-api-config">
+        <set-variable value="#[attributes.queryParams.beneficiary_id]" doc:name="Set Beneficiary ID Variable" doc:id="8a35ffcf-011a-4023-a1dd-4bedd110c309" variableName="beneficiary_id" />
+        <set-variable value="#[attributes.queryParams.claim_id]" doc:name="Set Claim ID Variable" doc:id="5d20792f-0a75-4945-9ca5-2939bf3c599c" variableName="claim_id" />
+        <db:update doc:name="Update Claim Status" doc:id="3b2be785-a68a-4fdb-8c8b-ad08bab1bc74" config-ref="Claims_Database_Config">
+            <db:sql><![CDATA[UPDATE CMS_CLAIMS SET CLM_STATUS=:claim_status WHERE DESYNPUF_ID=:beneficiary_id AND CLM_ID=:claim_id]]></db:sql>
+            <db:input-parameters><![CDATA[#[{
+	"beneficiary_id": attributes.queryParams.beneficiary_id,
+	"claim_id": attributes.queryParams.claim_id,
+	"claim_status": attributes.queryParams.claim_status
+}]]]></db:input-parameters>
+        </db:update>
+        <ee:transform doc:name="Transform Message" doc:id="3dfaeac4-12a9-495c-b67b-0d4dee7317dd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"httpStatus": "202",
+	"httpStatusDesc": "Claim with ID: " ++ vars.claim_id ++ " for Beneficiary with ID: " ++ vars.beneficiary_id ++ " has been updated Successfully!"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\claims:claims-api-config">
+        <ee:transform doc:name="Transform Message" doc:id="b3ad7dc3-0d52-431c-b944-99dc082eeddd" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	query: "SELECT ID, DESYNPUF_ID, CLM_ID, SEGMENT, CLM_FROM_DT, CLM_THRU_DT, PRVDR_NUM, CLM_PMT_AMT, NCH_PRMRY_PYR_CLM_PD_AMT, AT_PHYSN_NPI, OP_PHYSN_NPI, OT_PHYSN_NPI, CLM_ADMSN_DT, ADMTNG_ICD9_DGNS_CD, CLM_PASS_THRU_PER_DIEM_AMT, NCH_BENE_IP_DDCTBL_AMT, NCH_BENE_PTA_COINSRNC_LBLTY_AM, NCH_BENE_BLOOD_DDCTBL_LBLTY_AM, CLM_UTLZTN_DAY_CNT, NCH_BENE_DSCHRG_DT, CLM_DRG_CD, ICD9_DGNS_CD_1, ICD9_DGNS_CD_2, ICD9_DGNS_CD_3, ICD9_DGNS_CD_4, ICD9_DGNS_CD_5, ICD9_DGNS_CD_6, ICD9_DGNS_CD_7, ICD9_DGNS_CD_8, ICD9_DGNS_CD_9, ICD9_DGNS_CD_10, ICD9_PRCDR_CD_1, ICD9_PRCDR_CD_2, ICD9_PRCDR_CD_3, ICD9_PRCDR_CD_4, ICD9_PRCDR_CD_5, ICD9_PRCDR_CD_6, NCH_BENE_PTB_DDCTBL_AMT, NCH_BENE_PTB_COINSRNC_AMT, HCPCS_CD_1, HCPCS_CD_2, HCPCS_CD_3, HCPCS_CD_4, HCPCS_CD_5, HCPCS_CD_6, HCPCS_CD_7, HCPCS_CD_8, HCPCS_CD_9, HCPCS_CD_10, HCPCS_CD_11, HCPCS_CD_12, HCPCS_CD_13, HCPCS_CD_14, HCPCS_CD_15, HCPCS_CD_16, HCPCS_CD_17, HCPCS_CD_18, HCPCS_CD_19, HCPCS_CD_20, HCPCS_CD_21, HCPCS_CD_22, HCPCS_CD_23, HCPCS_CD_24, HCPCS_CD_25, HCPCS_CD_26, HCPCS_CD_27, HCPCS_CD_28, HCPCS_CD_29, HCPCS_CD_30, HCPCS_CD_31, HCPCS_CD_32, HCPCS_CD_33, HCPCS_CD_34, HCPCS_CD_35, HCPCS_CD_36, HCPCS_CD_37, HCPCS_CD_38, HCPCS_CD_39, HCPCS_CD_40, HCPCS_CD_41, HCPCS_CD_42, HCPCS_CD_43, HCPCS_CD_44, HCPCS_CD_45, CLM_TYPE, CLM_STATUS FROM CMS_CLAIMS" ++ (
+				if (!isEmpty(attributes.queryParams.beneficiary_id) or !isEmpty(attributes.queryParams.claim_id)) 
+					(" WHERE") ++
+					(if (!isEmpty(attributes.queryParams.beneficiary_id)) 
+						" DESYNPUF_ID=:beneficiary_id"
+					else "") ++
+					(if (!isEmpty(attributes.queryParams.beneficiary_id) and !isEmpty(attributes.queryParams.claim_id)) 
+						" AND"
+					else "") ++
+					(if (!isEmpty(attributes.queryParams.claim_id))
+						" CLM_ID=:claim_id"
+					else "")
+				else ""
+			)
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="fcf2d425-00ea-4d99-a805-bb979e8abdbf" message="#[payload]"/>
+		<db:select doc:name="Retrieve Claims" doc:id="a47b26d4-365b-4881-b152-36cd087aa57c" config-ref="Claims_Database_Config">
+			<db:sql ><![CDATA[#[payload.query]]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	"beneficiary_id": attributes.queryParams.beneficiary_id,
+	"claim_id": attributes.queryParams.claim_id
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="318ad3ef-9285-46da-b431-3706b1a9de46" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+    <flow name="post:\claims:application\json:claims-api-config">
+        <ee:transform doc:name="Transform Message" doc:id="cec1ace8-16fc-4cdd-ab3a-952cbe8d08ba">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <db:bulk-insert doc:name="Insert New Claims" doc:id="ff98a7ba-7541-42f4-a228-cf21309039c3" config-ref="Claims_Database_Config">
+            <db:sql><![CDATA[INSERT INTO CMS_CLAIMS (DESYNPUF_ID, CLM_ID, SEGMENT, CLM_FROM_DT, CLM_THRU_DT, PRVDR_NUM, CLM_PMT_AMT, NCH_PRMRY_PYR_CLM_PD_AMT, AT_PHYSN_NPI, OP_PHYSN_NPI, OT_PHYSN_NPI, CLM_ADMSN_DT, ADMTNG_ICD9_DGNS_CD, CLM_PASS_THRU_PER_DIEM_AMT, NCH_BENE_IP_DDCTBL_AMT, NCH_BENE_PTA_COINSRNC_LBLTY_AM, NCH_BENE_BLOOD_DDCTBL_LBLTY_AM, CLM_UTLZTN_DAY_CNT, NCH_BENE_DSCHRG_DT, CLM_DRG_CD, ICD9_DGNS_CD_1, ICD9_DGNS_CD_2, ICD9_DGNS_CD_3, ICD9_DGNS_CD_4, ICD9_DGNS_CD_5, ICD9_DGNS_CD_6, ICD9_DGNS_CD_7, ICD9_DGNS_CD_8, ICD9_DGNS_CD_9, ICD9_DGNS_CD_10, ICD9_PRCDR_CD_1, ICD9_PRCDR_CD_2, ICD9_PRCDR_CD_3, ICD9_PRCDR_CD_4, ICD9_PRCDR_CD_5, ICD9_PRCDR_CD_6, NCH_BENE_PTB_DDCTBL_AMT, NCH_BENE_PTB_COINSRNC_AMT, HCPCS_CD_1, HCPCS_CD_2, HCPCS_CD_3, HCPCS_CD_4, HCPCS_CD_5, HCPCS_CD_6, HCPCS_CD_7, HCPCS_CD_8, HCPCS_CD_9, HCPCS_CD_10, HCPCS_CD_11, HCPCS_CD_12, HCPCS_CD_13, HCPCS_CD_14, HCPCS_CD_15, HCPCS_CD_16, HCPCS_CD_17, HCPCS_CD_18, HCPCS_CD_19, HCPCS_CD_20, HCPCS_CD_21, HCPCS_CD_22, HCPCS_CD_23, HCPCS_CD_24, HCPCS_CD_25, HCPCS_CD_26, HCPCS_CD_27, HCPCS_CD_28, HCPCS_CD_29, HCPCS_CD_30, HCPCS_CD_31, HCPCS_CD_32, HCPCS_CD_33, HCPCS_CD_34, HCPCS_CD_35, HCPCS_CD_36, HCPCS_CD_37, HCPCS_CD_38, HCPCS_CD_39, HCPCS_CD_40, HCPCS_CD_41, HCPCS_CD_42, HCPCS_CD_43, HCPCS_CD_44, HCPCS_CD_45, CLM_TYPE, CLM_STATUS) 
+VALUES
+(:DESYNPUF_ID, :CLM_ID, :SEGMENT, :CLM_FROM_DT, :CLM_THRU_DT, :PRVDR_NUM, :CLM_PMT_AMT, :NCH_PRMRY_PYR_CLM_PD_AMT, :AT_PHYSN_NPI, :OP_PHYSN_NPI, :OT_PHYSN_NPI, :CLM_ADMSN_DT, :ADMTNG_ICD9_DGNS_CD, :CLM_PASS_THRU_PER_DIEM_AMT, :NCH_BENE_IP_DDCTBL_AMT, :NCH_BENE_PTA_COINSRNC_LBLTY_AM, :NCH_BENE_BLOOD_DDCTBL_LBLTY_AM, :CLM_UTLZTN_DAY_CNT, :NCH_BENE_DSCHRG_DT, :CLM_DRG_CD, :ICD9_DGNS_CD_1, :ICD9_DGNS_CD_2, :ICD9_DGNS_CD_3, :ICD9_DGNS_CD_4, :ICD9_DGNS_CD_5, :ICD9_DGNS_CD_6, :ICD9_DGNS_CD_7, :ICD9_DGNS_CD_8, :ICD9_DGNS_CD_9, :ICD9_DGNS_CD_10, :ICD9_PRCDR_CD_1, :ICD9_PRCDR_CD_2, :ICD9_PRCDR_CD_3, :ICD9_PRCDR_CD_4, :ICD9_PRCDR_CD_5, :ICD9_PRCDR_CD_6, :NCH_BENE_PTB_DDCTBL_AMT, :NCH_BENE_PTB_COINSRNC_AMT, :HCPCS_CD_1, :HCPCS_CD_2, :HCPCS_CD_3, :HCPCS_CD_4, :HCPCS_CD_5, :HCPCS_CD_6, :HCPCS_CD_7, :HCPCS_CD_8, :HCPCS_CD_9, :HCPCS_CD_10, :HCPCS_CD_11, :HCPCS_CD_12, :HCPCS_CD_13, :HCPCS_CD_14, :HCPCS_CD_15, :HCPCS_CD_16, :HCPCS_CD_17, :HCPCS_CD_18, :HCPCS_CD_19, :HCPCS_CD_20, :HCPCS_CD_21, :HCPCS_CD_22, :HCPCS_CD_23, :HCPCS_CD_24, :HCPCS_CD_25, :HCPCS_CD_26, :HCPCS_CD_27, :HCPCS_CD_28, :HCPCS_CD_29, :HCPCS_CD_30, :HCPCS_CD_31, :HCPCS_CD_32, :HCPCS_CD_33, :HCPCS_CD_34, :HCPCS_CD_35, :HCPCS_CD_36, :HCPCS_CD_37, :HCPCS_CD_38, :HCPCS_CD_39, :HCPCS_CD_40, :HCPCS_CD_41, :HCPCS_CD_42, :HCPCS_CD_43, :HCPCS_CD_44, :HCPCS_CD_45, :CLM_TYPE, :CLM_STATUS)]]></db:sql>
+        </db:bulk-insert>
+        <ee:transform doc:name="Transform Message" doc:id="6a72844e-a0e3-44fc-8dd6-73a93601efab">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"httpStatus": "201",
+	"httpStatusDesc": "Claims Inserted Successfully!"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="post:\claims\providerAddress:application\json:claims-api-config">
+        <logger level="INFO" message="#[payload]" />
+		<ee:transform doc:name="Transform Message" doc:id="651c9f9a-90f8-4523-b0c8-a89a6daf9494" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:bulk-insert doc:name="Insert Provider Address Details" doc:id="a28a6ced-d5b5-42b2-be8a-87a091da0a16" config-ref="Claims_Database_Config">
+			<db:sql ><![CDATA[INSERT INTO CMS_CLAIM_PROVIDER_ADDRESS_DETAILS (CMS_CLAIM_PROVIDER_DETAILS_ID, ADDRESS_1, ADDRESS_2, ADDRESS_PURPOSE, ADDRESS_TYPE, CITY, COUNTRY_CODE, COUNTRY_NAME, FAX_NUMBER, POSTAL_CODE, STATE, TELEPHONE_NUMBER) 
+VALUES
+(:CMS_CLAIM_PROVIDER_DETAILS_ID, :ADDRESS_1, :ADDRESS_2, :ADDRESS_PURPOSE, :ADDRESS_TYPE, :CITY, :COUNTRY_CODE, :COUNTRY_NAME, :FAX_NUMBER, :POSTAL_CODE, :STATE, :TELEPHONE_NUMBER)
+]]></db:sql>
+		</db:bulk-insert>
+		<ee:transform doc:name="Transform Message" doc:id="a18903ca-7de3-4b2e-b661-e4b27bf02a7f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"httpStatus": "201",
+	"httpStatusDesc": "Provider Address Details Inserted Successfully!"
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+    <flow name="post:\claims\provider:application\json:claims-api-config">
+        <logger level="INFO" message="#[payload]" />
+		<ee:transform doc:name="Transform Message" doc:id="3b145522-4fab-485d-b877-4b95bac976ad" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:insert doc:name="Insert Provider Details" doc:id="5415d58c-0d1b-44a2-96e4-96063a5082b0" config-ref="Claims_Database_Config" autoGenerateKeys="true">
+			<db:sql ><![CDATA[INSERT INTO CMS_CLAIM_PROVIDER_DETAILS (DESYNPUF_ID, CLM_ID, PROVIDER_NPI, CREDENTIAL, FIRST_NAME, MIDDLE_NAME, LAST_NAME, NAME, NAME_PREFIX, SOLE_PROPRIETOR, STATUS, ENUMERATION_TYPE) 
+VALUES
+(:DESYNPUF_ID, :CLM_ID, :PROVIDER_NPI, :CREDENTIAL, :FIRST_NAME, :MIDDLE_NAME, :LAST_NAME, :NAME, :NAME_PREFIX, :SOLE_PROPRIETOR, :STATUS, :ENUMERATION_TYPE)
+]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	DESYNPUF_ID: payload.DESYNPUF_ID,
+	CLM_ID: payload.CLM_ID, 
+	PROVIDER_NPI: payload.PROVIDER_NPI, 
+	CREDENTIAL: payload.CREDENTIAL, 
+	FIRST_NAME: payload.FIRST_NAME, 
+	MIDDLE_NAME: payload.MIDDLE_NAME, 
+	LAST_NAME: payload.LAST_NAME, 
+	NAME: payload.NAME, 
+	NAME_PREFIX: payload.NAME_PREFIX, 
+	SOLE_PROPRIETOR: payload.SOLE_PROPRIETOR, 
+	STATUS: payload.STATUS, 
+	ENUMERATION_TYPE: payload.ENUMERATION_TYPE
+}]]]></db:input-parameters>
+			<db:auto-generated-keys-column-names >
+				<db:auto-generated-keys-column-name value="ID" />
+			</db:auto-generated-keys-column-names>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="358f3e31-a4b5-48b4-9eb1-cb4908ae11a7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.generatedKeys.ID]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+    <flow name="get:\claims\beneficiary:claims-api-config">
+        <logger level="INFO" doc:name="Logger" doc:id="1d451ccb-0b06-4c04-83e9-b6fc296ad76d" message="#[attributes.queryParams.DESYNPUF_ID]"/>
+		<db:select doc:name="Beneficiary Exists?" doc:id="c1b00ba1-d198-4894-957a-e0c028e60429" config-ref="Claims_Database_Config">
+			<db:sql ><![CDATA[SELECT CASE WHEN COUNT(*)>0 THEN 'true' ELSE 'false' END AS "BENEFICIARY_RESULT" FROM CMS_BENEFIT_SUMMARY WHERE DESYNPUF_ID=:DESYNPUF_ID]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	DESYNPUF_ID: attributes.queryParams.DESYNPUF_ID
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload[0].BENEFICIARY_RESULT]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+</mule>
