@@ -13,7 +13,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-		<app.runtime>4.3.0-20201013</app.runtime>
+		<app.runtime>4.3.0-20210622</app.runtime>
 		<mule.maven.plugin.version>3.3.5</mule.maven.plugin.version>
 		<munit.version>2.3.5</munit.version>
 	</properties>
@@ -37,6 +37,22 @@
 							<artifactId>ojdbc8</artifactId>
 						</sharedLibrary>
 					</sharedLibraries>
+					<cloudHubDeployment>
+						<applicationName>claims-administration-system-api</applicationName>
+						<environment>Development</environment>
+						<objectStoreV2>true</objectStoreV2>
+						<businessGroup>MuleSoft</businessGroup>
+						<workers>1</workers>
+						<workerType>Micro</workerType>
+						<muleVersion>4.4.0</muleVersion>
+						<region>us-east-2</region>
+						<username>${anypoint.username}</username>
+						<password>${anypoint.password}</password>
+					<!-- 	<connectedAppClientId>${connected.app.client.id}</connectedAppClientId>
+						<connectedAppClientSecret>${connected.app.client.secret}</connectedAppClientSecret>
+						<connectedAppGrantType>client_credentials</connectedAppGrantType> -->
+					</cloudHubDeployment>
+					<classifier>mule-application</classifier>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -121,6 +137,12 @@
 			<artifactId>assertions</artifactId>
 			<version>1.0.2</version>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>works.integration</groupId>
+			<artifactId>mule-plugin-guidewire-sample-raml-for-mulesoft</artifactId>
+			<version>1.0.0</version>
+			<classifier>mule-plugin</classifier>
 		</dependency>
 	</dependencies>
 
